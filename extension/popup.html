@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pacemark</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="icons/icon-32.png" alt="" width="24" height="24">
+    <b>Pace<i>mark</i></b>
+  </header>
+
+  <button id="primary" class="primary" type="button" disabled>Checking this page…</button>
+  <p id="note" class="note" hidden></p>
+  <button id="reader" class="secondary" type="button">Open a PDF, Word or text file</button>
+
+  <section class="speed">
+    <output id="wpmOut" for="wpm">250</output><small>words per minute</small>
+    <input type="range" id="wpm" min="60" max="1000" step="10" value="250" aria-label="Words per minute">
+  </section>
+
+  <section>
+    <span class="label">Highlight color</span>
+    <div class="swatches" id="swatches">
+      <label class="custom" id="customWrap" title="Custom color"><input type="color" id="custom" aria-label="Custom highlight color"></label>
+    </div>
+  </section>
+
+  <section class="grid">
+    <label>Style
+      <select id="style"><option value="marker">Marker</option><option value="underline">Underline</option><option value="box">Outline</option></select>
+    </label>
+    <label>Words at a time
+      <select id="chunk"><option>1</option><option>2</option><option>3</option></select>
+    </label>
+    <label class="check"><input type="checkbox" id="punct"> Pause at punctuation</label>
+    <label class="check"><input type="checkbox" id="fade"> Dim words already read</label>
+  </section>
+
+  <footer>
+    <span><kbd id="shortcut">Alt+Shift+P</kbd> start or stop</span>
+    <span><kbd>Space</kbd> pause · <kbd>Esc</kbd> close</span>
+  </footer>
+  <script src="popup.js"></script>
+</body>
+</html>
