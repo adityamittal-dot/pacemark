@@ -1,0 +1,15 @@
+{
+  "name": "pacemark",
+  "version": "1.0.0",
+  "description": "A highlighter that moves through PDFs, Word documents and webpages at the reading speed you choose.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "npx --yes serve app -l 5173"
+  },
+  "repository": { "type": "git", "url": "https://github.com/adityamittal-dot/pacemark.git" },
+  "author": "Aditya Mittal",
+  "license": "MIT",
+  "engines": { "node": ">=18" }
+}
