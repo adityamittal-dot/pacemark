@@ -100,3 +100,19 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
 html{-webkit-text-size-adjust:100%}
 body{margin:0}
 [hidden]{display:none!important}
+
+/* PDF original-pages view: the highlight sits over the real words of the rendered page */
+.reader.layout{max-width:calc(var(--fs) * 46);font-family:var(--sans)}
+.pdfpage{position:relative;width:100%;background:#fff;margin:0 auto 20px;border-radius:3px;overflow:hidden;
+  box-shadow:0 1px 2px rgba(0,0,0,.08),0 10px 28px -14px rgba(20,40,35,.35)}
+.pdfpage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.layout .w{position:absolute;border-radius:2px;mix-blend-mode:multiply}
+.layout .w:hover{text-decoration:none;background:rgba(20,90,85,.12)}
+.layout .w.on{color:transparent}
+.layout.style-underline .w.on{background:linear-gradient(transparent 76%,var(--hl) 76%);box-shadow:none}
+.layout.style-box .w.on{background:none;box-shadow:0 0 0 2px var(--hl);mix-blend-mode:normal}
+.layout .w::after{content:"";position:absolute;top:-16%;bottom:-12%;left:0;right:calc(-1 * var(--gap, 0%));pointer-events:none}
+.layout.fade .w.read::after{background:rgba(255,255,255,.55)}
+.layout.fade .w.read{mix-blend-mode:normal}
+.linkbtn{border:none;background:none;padding:0;color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.docmeta .err{color:#B3261E}

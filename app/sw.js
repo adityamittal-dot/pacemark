@@ -1,10 +1,11 @@
 // Offline cache for the installed app. Bump VERSION whenever any cached file changes.
-const VERSION = "pacemark-v1.0.0";
+const VERSION = "pacemark-v1.1.0";
 const ASSETS = [
   "./",
   "index.html",
   "styles.css",
   "app.js",
+  "layout.js",
   "manifest.webmanifest",
   "icons/icon-192.png",
   "icons/icon-512.png",

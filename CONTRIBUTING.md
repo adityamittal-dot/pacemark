@@ -7,6 +7,7 @@ JavaScript, with pdf.js and mammoth.js vendored in `app/vendor/`. There is no bu
 
 ```
 app/          the web reader (also deployed to GitHub Pages and bundled into the extension)
+  layout.js   PDF word positions and reading order (columns, headers/footers)
   vendor/     pdf.js 3.11.174 and mammoth.js 1.6.0, unmodified
   sw.js       offline cache for the installed app — bump VERSION when cached files change
 extension/    the Chrome extension (Manifest V3)
@@ -30,7 +31,7 @@ After changing extension code, rebuild and press the reload icon on the extensio
 ## Pull requests
 
 - Keep changes focused; one feature or fix per PR.
-- Test in Chrome with a real PDF and at least one long article page.
+- Test in Chrome with a real PDF (include a multi-column one) and at least one long article page.
 - Check both light and dark mode, and a narrow (phone-width) window for the web app.
 - Update `CHANGELOG.md` under an `Unreleased` heading.
 

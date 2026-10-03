@@ -63,7 +63,10 @@
       <label>Words at a time
         <select id="chunk"><option>1</option><option>2</option><option>3</option></select>
       </label>
-      <label>Text size <input type="range" id="fontSize" min="15" max="30" value="20"></label>
+      <label>PDF view
+        <select id="pdfView"><option value="pages">Original pages</option><option value="text">Plain text</option></select>
+      </label>
+      <label>Text size / zoom <input type="range" id="fontSize" min="15" max="30" value="20"></label>
       <label><input type="checkbox" id="punct" checked> Pause at punctuation</label>
       <label><input type="checkbox" id="fadeRead" checked> Dim words already read</label>
       <label><input type="checkbox" id="follow" checked> Auto-scroll</label>
@@ -75,6 +78,7 @@
 
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/mammoth.browser.min.js"></script>
+<script src="layout.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -8,7 +8,7 @@ const store = {
   set(k, v){ try{ localStorage.setItem("pacemark:"+k, JSON.stringify(v)); }catch(e){} }
 };
 
-const S = Object.assign({wpm:250,color:"#FFE45C",style:"marker",chunk:1,fontSize:20,punct:true,fade:true,follow:true}, store.get("settings",{}));
+const S = Object.assign({wpm:250,color:"#FFE45C",style:"marker",chunk:1,fontSize:20,punct:true,fade:true,follow:true,pdfView:"pages"}, store.get("settings",{}));
 const saveSettings = () => store.set("settings", S);
 
 let words = [];     // span elements
@@ -20,6 +20,10 @@ let timer = null, nextAt = 0;
 let docKey = "sample";
 let followPausedUntil = 0;
 let wakeLock = null;
+let currentPdf = null;      // {pdf, analysis, name, key} for the open PDF
+let pageObserver = null, resizeTimer = null;
+const visiblePages = new Set();
+const SENTENCE_RE = /[.!?…]["'”’)\]]*$/;
 
 /* ---------- colors ---------- */
 function inkFor(hex){
@@ -62,6 +66,7 @@ function setMeta(name, kind, extra){
 // blocks: [{type:'p'|'h'|'page', text}]
 function render(blocks, key){
   stop();
+  resetPageView();
   const reader = $("reader");
   reader.innerHTML = "";
   words = []; tokens = []; sentenceStarts = [0];
@@ -87,12 +92,124 @@ function render(blocks, key){
     frag.appendChild(el);
   }
   reader.appendChild(frag);
-  docKey = key;
-  const saved = store.get("pos:" + key, 0);
-  pos = -1;
-  goTo(Math.min(saved, Math.max(0, words.length - 1)), false);
+  restorePosition(key);
   if (!words.length) reader.innerHTML = '<p class="loading">No readable text found in this file. If it is a scanned PDF, it contains images rather than text.</p>';
 }
+
+function restorePosition(key, at){
+  docKey = key;
+  const saved = at ?? store.get("pos:" + key, 0);
+  pos = -1;
+  goTo(Math.min(saved, Math.max(0, words.length - 1)), false);
+}
+
+/* ---------- PDF: original pages with the highlight drawn over the real words ---------- */
+async function openPdf(buf){
+  if (!window.pdfjsLib || !window.PdfLayout) throw new Error("The PDF reader didn't load. Reload the page and try again.");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js";
+  // Browsers refuse Web Workers on file:// pages, so run the PDF parser on the main thread there.
+  if (location.protocol === "file:" && !window.pdfjsWorker) await loadScript("vendor/pdf.worker.min.js");
+  return pdfjsLib.getDocument({data: buf}).promise;
+}
+
+function showPdf(keepPlace){
+  const doc = currentPdf;
+  const fraction = keepPlace && words.length ? pos / words.length : null;
+  if (S.pdfView === "pages") renderPages(doc);
+  else render(PdfLayout.toBlocks(doc.analysis), doc.key);
+  if (fraction !== null) restorePosition(doc.key, Math.round(fraction * words.length));
+  const n = doc.analysis.pages.length;
+  setMeta(doc.name, "PDF", n + (n === 1 ? " page" : " pages"));
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.className = "linkbtn";
+  btn.textContent = S.pdfView === "pages" ? "Show as plain text" : "Show original pages";
+  btn.onclick = () => { S.pdfView = S.pdfView === "pages" ? "text" : "pages"; $("pdfView").value = S.pdfView; saveSettings(); showPdf(true); };
+  $("docmeta").appendChild(btn);
+  if (!words.length){
+    const note = document.createElement("span");
+    note.className = "err";
+    note.textContent = "No selectable text found. This looks like a scanned PDF, which needs OCR first.";
+    $("docmeta").appendChild(note);
+  }
+}
+
+function renderPages(doc){
+  stop();
+  resetPageView();
+  const reader = $("reader");
+  reader.innerHTML = "";
+  reader.classList.add("layout");
+  words = []; tokens = []; sentenceStarts = [0];
+  const frag = document.createDocumentFragment();
+  for (const pg of doc.analysis.pages){
+    const div = document.createElement("div");
+    div.className = "pdfpage";
+    div.style.aspectRatio = `${pg.width} / ${pg.height}`;
+    div.setAttribute("aria-label", "Page " + pg.num);
+    div._pg = pg;
+    div.appendChild(document.createElement("canvas"));
+    for (const f of pg.frags){
+      if (f.paraStart && sentenceStarts[sentenceStarts.length - 1] !== words.length) sentenceStarts.push(words.length);
+      f.words.forEach((w, j) => {
+        const s = document.createElement("span");
+        s.className = "w"; s.dataset.i = words.length;
+        // --gap stretches the "already read" shading over the space before the next word
+        const next = f.words[j + 1], ww = Math.max(0.1, w.x1 - w.x0);
+        const gap = next ? Math.max(0, next.x0 - w.x1) / ww * 100 : 0;
+        s.style.cssText = `left:${w.x0 / pg.width * 100}%;top:${w.y0 / pg.height * 100}%;width:${ww / pg.width * 100}%;height:${(w.y1 - w.y0) / pg.height * 100}%;--gap:${gap.toFixed(1)}%`;
+        div.appendChild(s);
+        words.push(s); tokens.push(w.t);
+        if (SENTENCE_RE.test(w.t)) sentenceStarts.push(words.length);
+      });
+    }
+    frag.appendChild(div);
+  }
+  reader.appendChild(frag);
+  // draw pages only when they are near the screen, and free them again when far away
+  pageObserver = new IntersectionObserver(entries => {
+    for (const en of entries){
+      if (en.isIntersecting){ visiblePages.add(en.target); drawPage(en.target); }
+      else { visiblePages.delete(en.target); clearPage(en.target); }
+    }
+  }, {rootMargin: "1500px 0px"});
+  reader.querySelectorAll(".pdfpage").forEach(d => pageObserver.observe(d));
+  restorePosition(doc.key);
+}
+
+async function drawPage(div){
+  const doc = currentPdf;
+  const width = div.clientWidth;
+  if (!doc || !width) return;
+  const target = Math.round(width * Math.min(window.devicePixelRatio || 1, 2.5));
+  if (div._drawn === target) return;
+  div._drawn = target;
+  div._task?.cancel();
+  const page = await doc.pdf.getPage(div._pg.num);
+  const viewport = page.getViewport({scale: target / div._pg.width});
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(viewport.width); canvas.height = Math.round(viewport.height);
+  div._task = page.render({canvasContext: canvas.getContext("2d"), viewport});
+  try { await div._task.promise; } catch (e) { return; }   // cancelled by a newer draw
+  if (div._drawn !== target || !div.isConnected) return;
+  div.querySelector("canvas").replaceWith(canvas);
+}
+function clearPage(div){
+  div._task?.cancel();
+  if (!div._drawn) return;
+  div._drawn = 0;
+  div.querySelector("canvas").replaceWith(document.createElement("canvas"));
+}
+function resetPageView(){
+  pageObserver?.disconnect();
+  pageObserver = null;
+  visiblePages.clear();
+  $("reader").classList.remove("layout");
+}
+// redraw sharper pages after zooming or resizing the window
+new ResizeObserver(() => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => visiblePages.forEach(drawPage), 200);
+}).observe($("reader"));
 
 /* ---------- highlighting ---------- */
 function goTo(i, scroll = true){
@@ -228,6 +345,7 @@ $("wpm").addEventListener("input", e => setWpm(+e.target.value));
 $("style").addEventListener("change", e => { S.style = e.target.value; applyLook(); saveSettings(); });
 $("chunk").addEventListener("change", e => { S.chunk = +e.target.value; const p = pos; for (let k=Math.max(0,p);k<Math.min(words.length,p+3);k++) words[k].classList.remove("on"); pos = p; goTo(p, false); saveSettings(); });
 $("fontSize").addEventListener("input", e => { S.fontSize = +e.target.value; applyLook(); saveSettings(); });
+$("pdfView").addEventListener("change", e => { S.pdfView = e.target.value; saveSettings(); if (currentPdf) showPdf(true); });
 $("punct").addEventListener("change", e => { S.punct = e.target.checked; saveSettings(); });
 $("fadeRead").addEventListener("change", e => { S.fade = e.target.checked; applyLook(); saveSettings(); });
 $("follow").addEventListener("change", e => { S.follow = e.target.checked; saveSettings(); });
@@ -262,6 +380,7 @@ $("pasteCancel").onclick = () => { $("pastePanel").hidden = true; };
 $("pasteGo").onclick = () => {
   const t = $("pasteText").value.trim(); if (!t) return;
   $("pastePanel").hidden = true;
+  currentPdf?.pdf.destroy(); currentPdf = null;
   const blocks = textToBlocks(t);
   setMeta("Pasted text", "Text", "");
   render(blocks, "paste:" + t.length + ":" + t.slice(0, 40));
@@ -293,11 +412,14 @@ async function loadFile(f){
   setMeta(name, "Loading…", "");
   window.scrollTo({top:0});
   try{
+    if (!(ext === "pdf" || f.type === "application/pdf")) { currentPdf?.pdf.destroy(); currentPdf = null; }
     if (ext === "pdf" || f.type === "application/pdf"){
-      const blocks = await readPdf(await f.arrayBuffer(), n => setMeta(name, "PDF", "extracting page " + n));
-      const pages = blocks.filter(b => b.type === "page").length;
-      setMeta(name, "PDF", pages + (pages === 1 ? " page" : " pages"));
-      render(blocks, key);
+      const pdf = await openPdf(await f.arrayBuffer());
+      const analysis = await PdfLayout.analyze(pdf, (n, total) => setMeta(name, "PDF", `reading page ${n} of ${total}`));
+      currentPdf?.pdf.destroy();
+      currentPdf = {pdf, analysis, name, key};
+      showPdf(false);
+      return;
     } else if (ext === "docx"){
       if (!window.mammoth) throw new Error("The Word reader didn't load. Reload the page and try again.");
       const res = await mammoth.extractRawText({arrayBuffer: await f.arrayBuffer()});
@@ -328,60 +450,6 @@ function loadScript(src){
 }
 function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
-async function readPdf(buf, onPage){
-  if (!window.pdfjsLib) throw new Error("The PDF reader didn't load. Reload the page and try again.");
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js";
-  // Browsers refuse Web Workers on file:// pages, so run the PDF parser on the main thread there.
-  if (location.protocol === "file:" && !window.pdfjsWorker) await loadScript("vendor/pdf.worker.min.js");
-  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
-  const blocks = [];
-  for (let p = 1; p <= pdf.numPages; p++){
-    onPage?.(p);
-    const page = await pdf.getPage(p);
-    const tc = await page.getTextContent();
-    // group items into lines
-    const lines = []; let cur = null;
-    for (const it of tc.items){
-      if (!("str" in it)) continue;
-      if (!it.str && !it.hasEOL) continue;
-      const y = it.transform[5], h = Math.abs(it.transform[3]) || it.height || 0;
-      if (!it.str){ if (cur && cur.t.trim()) lines.push(cur); cur = null; continue; }
-      if (!cur || Math.abs(y - cur.y) > Math.max(h, cur.h) * 0.5){
-        if (cur && cur.t.trim()) lines.push(cur);
-        cur = {t: "", y, h};
-      }
-      cur.h = Math.max(cur.h, h);
-      cur.t += it.str;
-      if (it.hasEOL){ if (cur.t.trim()) lines.push(cur); cur = null; }
-    }
-    if (cur && cur.t.trim()) lines.push(cur);
-    if (!lines.length) continue;
-    blocks.push({type:"page", text:"Page " + p});
-    // Paragraph breaks: a gap well beyond the font size, a jump back up (new column) or a change of font size.
-    const sizes = lines.map(l => l.h).sort((a, b) => a - b);
-    const bodySize = sizes[Math.floor(sizes.length / 2)] || 10;
-    let para = "", paraSize = 0;
-    const flush = () => {
-      if (para.trim()) blocks.push({type: paraSize > bodySize * 1.25 && para.length < 160 ? "h" : "p", text: para});
-      para = "";
-    };
-    lines.forEach((ln, i) => {
-      const text = ln.t.replace(/\s+/g, " ").trim();
-      if (i > 0){
-        const prev = lines[i-1];
-        const gap = prev.y - ln.y;
-        const sizeChange = Math.max(ln.h, prev.h) / Math.max(1, Math.min(ln.h, prev.h)) > 1.2;
-        if (gap > Math.max(ln.h, prev.h) * 1.6 || gap < -2 || sizeChange) flush();
-      }
-      if (!para) paraSize = ln.h;
-      if (para.endsWith("-") && /^[a-z]/.test(text)) para = para.slice(0, -1) + text;
-      else para += (para ? " " : "") + text;
-    });
-    flush();
-  }
-  return blocks;
-}
-
 /* ---------- init ---------- */
 const SAMPLE = [
   {type:"h", text:"Sample: reading with a pacer"},
@@ -392,7 +460,7 @@ const SAMPLE = [
 ];
 $("wpm").value = S.wpm; $("wpmOut").textContent = S.wpm;
 $("style").value = S.style; $("chunk").value = String(S.chunk);
-$("fontSize").value = S.fontSize; $("punct").checked = S.punct; $("fadeRead").checked = S.fade; $("follow").checked = S.follow;
+$("fontSize").value = S.fontSize; $("pdfView").value = S.pdfView; $("punct").checked = S.punct; $("fadeRead").checked = S.fade; $("follow").checked = S.follow;
 applyColor(S.color); applyLook();
 // ?src=<url> opens a remote document (used by the browser extension to hand over PDFs).
 const src = new URLSearchParams(location.search).get("src");

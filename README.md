@@ -32,6 +32,8 @@ speed, it keeps the rhythm and remembers where you are.
 ## Features
 
 - **Reads what you have:** PDF, Word (`.docx`), Markdown, HTML and plain-text files, or pasted text.
+- **PDFs keep their look:** pages appear exactly as designed and the highlighter moves over the real words.
+- **Understands layouts:** multi-column papers and magazines are read column by column; running headers, footers and page numbers are skipped.
 - **Speed from 60 to 1000 WPM**, with optional longer pauses at commas and full stops so it reads like speech, not a metronome.
 - **Your highlighter:** five marker colors or any custom color; marker, underline or outline styles; one to three words at a time.
 - **Smooth auto-scroll:** the page glides as the highlight nears the bottom, so the line you're reading stays near the middle.
@@ -88,9 +90,19 @@ Each word gets `60 000 / WPM` milliseconds. With **Pause at punctuation** on, a 
 holds twice as long, a comma, colon or dash 1.45×, and words longer than nine letters a little extra. The
 timer corrects for drift, so the highlight doesn't fall behind over a long chapter.
 
-PDF text is pulled out with [pdf.js](https://mozilla.github.io/pdf.js/). Lines are joined into paragraphs
-using font size and line spacing, hyphenated line breaks are rejoined, and larger type becomes headings.
-Scanned PDFs contain images rather than text, so they need OCR first.
+PDFs are drawn with [pdf.js](https://mozilla.github.io/pdf.js/), and every word gets a box at its exact
+position on the page. Reading order comes from the layout, not from the order text is stored in the file:
+
+1. Word pieces are merged, and words are grouped into lines that never cross a column gap.
+2. Wherever a clean vertical gutter runs through a region, the left side is read before the right.
+3. Where a few lines cross the gutter (a full-width title, figure caption or footnote), the region is split
+   above and below them, so those lines stay in place between the column sections.
+4. Text that repeats in the top or bottom margin across pages (running headers, footers, page numbers)
+   and tiny print such as figure labels is skipped.
+
+Scanned PDFs contain images rather than text, so they need OCR first. If a layout ever reads in the
+wrong order, switch **PDF view** to *Plain text* to see the order Pacemark worked out, and please
+[open an issue](https://github.com/adityamittal-dot/pacemark/issues) with the file.
 
 ## Development
 
