@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax check
+        run: |
+          for f in app/app.js app/sw.js extension/*.js scripts/build.mjs; do node --check "$f"; done
+      - name: Validate manifests
+        run: |
+          node -e 'JSON.parse(require("fs").readFileSync("extension/manifest.json"))'
+          node -e 'JSON.parse(require("fs").readFileSync("app/manifest.webmanifest"))'
+      - name: Build packages
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pacemark-packages
+          path: dist/*.zip
