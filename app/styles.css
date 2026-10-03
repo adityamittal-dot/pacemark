@@ -102,8 +102,8 @@ body{margin:0}
 [hidden]{display:none!important}
 
 /* PDF original-pages view: the highlight sits over the real words of the rendered page */
-.reader.layout{max-width:calc(var(--fs) * 46);font-family:var(--sans)}
-.pdfpage{position:relative;width:100%;background:#fff;margin:0 auto 20px;border-radius:3px;overflow:hidden;
+.reader.layout{max-width:none;overflow-x:auto;font-family:var(--sans)}
+.pdfpage{position:relative;width:var(--pagew,100%);max-width:none;background:#fff;margin:0 auto 20px;border-radius:3px;overflow:hidden;
   box-shadow:0 1px 2px rgba(0,0,0,.08),0 10px 28px -14px rgba(20,40,35,.35)}
 .pdfpage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .layout .w{position:absolute;border-radius:2px;mix-blend-mode:multiply}
@@ -116,3 +116,17 @@ body{margin:0}
 .layout.fade .w.read{mix-blend-mode:normal}
 .linkbtn{border:none;background:none;padding:0;color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .docmeta .err{color:#B3261E}
+
+/* zoom + full-screen controls */
+.view{display:flex;align-items:center;gap:4px}
+.ib.sm{width:32px;height:32px}
+.ib.sm svg{width:16px;height:16px}
+.ib[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.zoomval{min-width:4.2ch;border:none;background:none;cursor:pointer;font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted);padding:4px 2px;border-radius:6px}
+.zoomval:hover{color:var(--ink)}
+/* full-screen reading: only the document and the controls */
+body.focus .top,body.focus .docmeta,body.focus .paste{display:none!important}
+body.focus .reader{padding-block:16px}
+body.focus .reader.layout{max-width:none}
+.controls .stats{flex:0 1 auto}
+@media (max-width:1180px){ .controls .stats{margin-left:0;width:100%;text-align:center} }

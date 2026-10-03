@@ -36,6 +36,7 @@ speed, it keeps the rhythm and remembers where you are.
 - **Understands layouts:** multi-column papers and magazines are read column by column; running headers, footers and page numbers are skipped.
 - **Speed from 60 to 1000 WPM**, with optional longer pauses at commas and full stops so it reads like speech, not a metronome.
 - **Your highlighter:** five marker colors or any custom color; marker, underline or outline styles; one to three words at a time.
+- **Zoom and full screen:** zoom pages from 50% to 300% or fit them to the window, and read full screen with nothing else in view.
 - **Smooth auto-scroll:** the page glides as the highlight nears the bottom, so the line you're reading stays near the middle.
 - **Click any word** to start there. Skip by sentence, scrub the progress bar, dim the words you've read.
 - **Remembers your place** in every file and keeps your settings on your device.
@@ -81,6 +82,9 @@ The extension works in Chrome, Edge, Brave, Arc and other Chromium browsers.
 | <kbd>←</kbd> <kbd>→</kbd> | Previous / next word |
 | <kbd>Shift</kbd> + <kbd>←</kbd> <kbd>→</kbd> | Previous / next sentence |
 | <kbd>↑</kbd> <kbd>↓</kbd> | Speed ±10 WPM |
+| <kbd>+</kbd> <kbd>−</kbd> | Zoom in / out |
+| <kbd>0</kbd> | Fit page to window width |
+| <kbd>F</kbd> | Full-screen reading |
 | <kbd>Esc</kbd> | Stop highlighting (extension) |
 | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> | Start / stop on the current page (extension; change it at `chrome://extensions/shortcuts`) |
 

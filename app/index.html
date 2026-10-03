@@ -53,6 +53,13 @@
       <div class="swatches" id="swatches" role="group" aria-label="Highlight color">
         <label class="custom" id="customWrap" title="Custom color"><input type="color" id="customColor" value="#ffe45c" aria-label="Custom highlight color"></label>
       </div>
+      <div class="view" role="group" aria-label="Page size">
+        <button class="ib sm" id="zoomOut" type="button" aria-label="Zoom out (−)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 12h12"/></svg></button>
+        <button class="zoomval" id="zoomVal" type="button" title="Reset to 100%">100%</button>
+        <button class="ib sm" id="zoomIn" type="button" aria-label="Zoom in (+)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 12h12M12 6v12"/></svg></button>
+        <button class="ib sm" id="fitBtn" type="button" aria-label="Fit page to window width (0)" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg></button>
+        <button class="ib sm" id="fullBtn" type="button" aria-label="Full-screen reading (F)" aria-pressed="false"><svg id="fullIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      </div>
       <button class="ib settings-toggle" id="settingsBtn" type="button" aria-label="More settings" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
       <div class="stats" id="stats">0 / 0 words · 0:00 left</div>
     </div>
@@ -66,11 +73,10 @@
       <label>PDF view
         <select id="pdfView"><option value="pages">Original pages</option><option value="text">Plain text</option></select>
       </label>
-      <label>Text size / zoom <input type="range" id="fontSize" min="15" max="30" value="20"></label>
       <label><input type="checkbox" id="punct" checked> Pause at punctuation</label>
       <label><input type="checkbox" id="fadeRead" checked> Dim words already read</label>
       <label><input type="checkbox" id="follow" checked> Auto-scroll</label>
-      <span class="keys"><kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> word · <kbd>Shift</kbd>+arrows sentence · <kbd>↑</kbd><kbd>↓</kbd> speed · click any word to jump</span>
+      <span class="keys"><kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> word · <kbd>Shift</kbd>+arrows sentence · <kbd>↑</kbd><kbd>↓</kbd> speed · <kbd>+</kbd><kbd>−</kbd> zoom · <kbd>0</kbd> fit width · <kbd>F</kbd> full screen · click any word to jump</span>
     </div>
   </div>
 </footer>

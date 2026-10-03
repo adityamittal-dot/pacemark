@@ -8,7 +8,7 @@ const store = {
   set(k, v){ try{ localStorage.setItem("pacemark:"+k, JSON.stringify(v)); }catch(e){} }
 };
 
-const S = Object.assign({wpm:250,color:"#FFE45C",style:"marker",chunk:1,fontSize:20,punct:true,fade:true,follow:true,pdfView:"pages"}, store.get("settings",{}));
+const S = Object.assign({wpm:250,color:"#FFE45C",style:"marker",chunk:1,zoom:100,punct:true,fade:true,follow:true,pdfView:"pages"}, store.get("settings",{}));
 const saveSettings = () => store.set("settings", S);
 
 let words = [];     // span elements
@@ -180,7 +180,8 @@ async function drawPage(div){
   const doc = currentPdf;
   const width = div.clientWidth;
   if (!doc || !width) return;
-  const target = Math.round(width * Math.min(window.devicePixelRatio || 1, 2.5));
+  // cap the bitmap size so 300% zoom on a sharp screen doesn't exhaust memory
+  const target = Math.min(4096, Math.round(width * Math.min(window.devicePixelRatio || 1, 2.5)));
   if (div._drawn === target) return;
   div._drawn = target;
   div._task?.cancel();
@@ -236,6 +237,15 @@ function follow(){
   const avail = window.innerHeight - document.querySelector(".bar").offsetHeight;
   if (r.bottom < 0 || r.top > avail) glideTo(window.scrollY + r.top - avail * 0.35, 0.25);
   else if (r.top < avail * 0.12 || r.bottom > avail * 0.6) glideTo(window.scrollY + r.top - avail * 0.42, 0.06);
+  // zoomed in past the window width: slide sideways to keep the word in view
+  const reader = $("reader");
+  if (reader.scrollWidth > reader.clientWidth + 1){
+    const box = reader.getBoundingClientRect();
+    if (r.left < box.left + box.width * 0.1 || r.right > box.right - box.width * 0.1){
+      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      reader.scrollTo({left: reader.scrollLeft + r.left - box.left - box.width * 0.3, behavior: reduce ? "auto" : "smooth"});
+    }
+  }
 }
 
 /* Smooth follow: as the current word nears the bottom of the view, glide the page up so its line
@@ -344,7 +354,65 @@ function setWpm(v){
 $("wpm").addEventListener("input", e => setWpm(+e.target.value));
 $("style").addEventListener("change", e => { S.style = e.target.value; applyLook(); saveSettings(); });
 $("chunk").addEventListener("change", e => { S.chunk = +e.target.value; const p = pos; for (let k=Math.max(0,p);k<Math.min(words.length,p+3);k++) words[k].classList.remove("on"); pos = p; goTo(p, false); saveSettings(); });
-$("fontSize").addEventListener("input", e => { S.fontSize = +e.target.value; applyLook(); saveSettings(); });
+
+/* ---------- zoom and full screen ---------- */
+// zoom is a percentage, or "fit" to fill the window width. It sizes the pages in the original-pages
+// view and the text in the plain-text view.
+const ZOOMS = [50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300];
+function zoomBy(dir){
+  const cur = S.zoom === "fit" ? fitPercent() : S.zoom;
+  const next = dir > 0 ? ZOOMS.find(z => z > cur + 1) : [...ZOOMS].reverse().find(z => z < cur - 1);
+  setZoom(next ?? (dir > 0 ? ZOOMS[ZOOMS.length - 1] : ZOOMS[0]));
+}
+// the zoom level that "fit" currently amounts to, relative to the 920px page used at 100%
+function fitPercent(){ return Math.round($("reader").clientWidth / Math.min(920, $("reader").clientWidth) * 100); }
+function setZoom(z){
+  S.zoom = z;
+  applyLook();
+  saveSettings();
+  // keep the current word in view and redraw pages at the new size
+  centerCurrent();
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => visiblePages.forEach(drawPage), 300);
+}
+// bring the current word back to the middle once a zoom or full-screen change has settled
+let centerTimer = null;
+function centerCurrent(){
+  clearTimeout(centerTimer);
+  centerTimer = setTimeout(() => {
+    const el = words[pos]; if (!el) return;
+    stopGlide();
+    const r = el.getBoundingClientRect();
+    const avail = window.innerHeight - document.querySelector(".bar").offsetHeight;
+    window.scrollTo({top: window.scrollY + r.top - avail * 0.4, behavior: "instant"});
+    const reader = $("reader"), box = reader.getBoundingClientRect();
+    if (reader.scrollWidth > reader.clientWidth + 1) reader.scrollLeft += r.left - box.left - box.width * 0.3;
+  }, 250);
+}
+$("zoomIn").onclick = () => zoomBy(1);
+$("zoomOut").onclick = () => zoomBy(-1);
+$("zoomVal").onclick = () => setZoom(100);
+$("fitBtn").onclick = () => setZoom(S.zoom === "fit" ? 100 : "fit");
+
+function setFull(on){
+  document.body.classList.toggle("focus", on);
+  $("fullBtn").setAttribute("aria-pressed", on);
+  $("fullIcon").innerHTML = on
+    ? '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>'
+    : '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>';
+}
+async function toggleFull(){
+  const on = !document.body.classList.contains("focus");
+  setFull(on);
+  try {
+    if (on && !document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+    else if (!on && document.fullscreenElement) await document.exitFullscreen();
+  } catch (e) { /* full-screen not allowed here: the distraction-free layout still applies */ }
+  centerCurrent();
+}
+$("fullBtn").onclick = toggleFull;
+// leaving full screen with Esc also leaves the distraction-free layout
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) setFull(false); centerCurrent(); });
 $("pdfView").addEventListener("change", e => { S.pdfView = e.target.value; saveSettings(); if (currentPdf) showPdf(true); });
 $("punct").addEventListener("change", e => { S.punct = e.target.checked; saveSettings(); });
 $("fadeRead").addEventListener("change", e => { S.fade = e.target.checked; applyLook(); saveSettings(); });
@@ -358,7 +426,11 @@ function applyLook(){
   r.classList.remove("style-marker","style-underline","style-box");
   r.classList.add("style-" + S.style);
   r.classList.toggle("fade", S.fade);
-  document.documentElement.style.setProperty("--fs", S.fontSize + "px");
+  const z = S.zoom === "fit" ? null : S.zoom / 100;
+  document.documentElement.style.setProperty("--fs", Math.round(20 * (z ?? 1)) + "px");
+  r.style.setProperty("--pagew", z === null ? "100%" : `calc(min(920px, 100%) * ${z})`);
+  $("zoomVal").textContent = S.zoom === "fit" ? "Fit" : S.zoom + "%";
+  $("fitBtn").setAttribute("aria-pressed", S.zoom === "fit");
 }
 // manual scrolling during playback pauses auto-follow for a few seconds
 ["wheel","touchmove"].forEach(ev => window.addEventListener(ev, () => { stopGlide(); if (playing) followPausedUntil = performance.now() + 4000; }, {passive:true}));
@@ -370,6 +442,11 @@ document.addEventListener("keydown", e => {
   else if (e.key === "ArrowLeft"){ e.preventDefault(); e.shiftKey ? sentenceJump(-1) : jump(pos - 1); }
   else if (e.key === "ArrowUp"){ e.preventDefault(); setWpm(S.wpm + 10); }
   else if (e.key === "ArrowDown"){ e.preventDefault(); setWpm(S.wpm - 10); }
+  else if (e.ctrlKey || e.metaKey || e.altKey) return;
+  else if (e.key === "+" || e.key === "="){ e.preventDefault(); zoomBy(1); }
+  else if (e.key === "-" || e.key === "_"){ e.preventDefault(); zoomBy(-1); }
+  else if (e.key === "0"){ e.preventDefault(); setZoom("fit"); }
+  else if (e.key === "f" || e.key === "F"){ e.preventDefault(); toggleFull(); }
 });
 
 /* ---------- file loading ---------- */
@@ -460,7 +537,7 @@ const SAMPLE = [
 ];
 $("wpm").value = S.wpm; $("wpmOut").textContent = S.wpm;
 $("style").value = S.style; $("chunk").value = String(S.chunk);
-$("fontSize").value = S.fontSize; $("pdfView").value = S.pdfView; $("punct").checked = S.punct; $("fadeRead").checked = S.fade; $("follow").checked = S.follow;
+$("pdfView").value = S.pdfView; $("punct").checked = S.punct; $("fadeRead").checked = S.fade; $("follow").checked = S.follow;
 applyColor(S.color); applyLook();
 // ?src=<url> opens a remote document (used by the browser extension to hand over PDFs).
 const src = new URLSearchParams(location.search).get("src");

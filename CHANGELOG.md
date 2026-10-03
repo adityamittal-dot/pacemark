@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-10-04
+
+### Added
+- Zoom controls in the bottom bar (−, +, reset, **Fit width**) for the page view; in the plain-text
+  view they change the text size. Zoomed-in pages scroll sideways and follow the highlight.
+- Full-screen reading mode that hides everything except the document and the controls.
+- Keyboard: <kbd>+</kbd>/<kbd>−</kbd> zoom, <kbd>0</kbd> fit width, <kbd>F</kbd> full screen.
+
+### Changed
+- The text size slider is replaced by the zoom controls.
+
+### Fixed
+- The installed app could stay on an old version after an update, because the updater re-saved
+  files from the browser's short-term cache. It now always fetches fresh files, loads its own code
+  from the network when online, and reloads itself once when an update lands.
+
 ## [1.1.0] - 2026-10-04
 
 ### Added
@@ -31,5 +47,6 @@ All notable changes to this project are documented here. The format follows
 - Chrome extension that highlights any webpage in place, with a floating control bar, keyboard shortcut and context menus.
 - Extension hand-off that opens PDFs (including Chrome's own PDF tabs) in the bundled reader.
 
+[1.2.0]: https://github.com/adityamittal-dot/pacemark/releases/tag/v1.2.0
 [1.1.0]: https://github.com/adityamittal-dot/pacemark/releases/tag/v1.1.0
 [1.0.0]: https://github.com/adityamittal-dot/pacemark/releases/tag/v1.0.0
