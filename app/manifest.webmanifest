@@ -1,0 +1,25 @@
+{
+  "name": "Pacemark Reader",
+  "short_name": "Pacemark",
+  "description": "A highlighter that moves through PDFs, Word documents and text at the reading speed you choose.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ECEFEA",
+  "theme_color": "#145A55",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "application/pdf": [".pdf"],
+        "text/plain": [".txt", ".md"],
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]
+      }
+    }
+  ]
+}
