@@ -487,6 +487,16 @@ if ("launchQueue" in window) {
 }
 
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
+  // When an update takes over an already-open window, reload once so the new version shows right away.
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController || reloading || playing) return;
+    reloading = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register("sw.js", {updateViaCache: "none"})
+    .then(reg => reg.update())
+    .catch(() => {});
 }
 })();

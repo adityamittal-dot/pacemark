@@ -1,12 +1,7 @@
-// Offline cache for the installed app. Bump VERSION whenever any cached file changes.
-const VERSION = "pacemark-v1.1.0";
-const ASSETS = [
-  "./",
-  "index.html",
-  "styles.css",
-  "app.js",
-  "layout.js",
-  "manifest.webmanifest",
+// Offline support for the installed app. Bump VERSION whenever any cached file changes.
+const VERSION = "pacemark-v1.2.0";
+const SHELL = ["./", "index.html", "styles.css", "app.js", "layout.js", "manifest.webmanifest"];
+const STATIC = [
   "icons/icon-192.png",
   "icons/icon-512.png",
   "vendor/pdf.min.js",
@@ -15,7 +10,17 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(VERSION).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // cache: "reload" skips the browser's HTTP cache, which would otherwise hand back the previous
+  // version's files for up to ten minutes and freeze the app on them.
+  event.waitUntil(
+    caches.open(VERSION)
+      .then(cache => Promise.all([...SHELL, ...STATIC].map(url =>
+        fetch(new Request(url, { cache: "reload" })).then(res => {
+          if (!res.ok) throw new Error(`${url}: ${res.status}`);
+          return cache.put(url, res);
+        }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", event => {
@@ -26,21 +31,41 @@ self.addEventListener("activate", event => {
   );
 });
 
-// Cache first for our own files; fonts are cached as they are fetched.
+async function networkFirst(request) {
+  const cache = await caches.open(VERSION);
+  try {
+    const res = await fetch(request, { cache: "no-cache" });
+    if (res.ok) cache.put(request, res.clone());
+    return res;
+  } catch (err) {
+    return (await cache.match(request, { ignoreSearch: true })) ||
+      (request.mode === "navigate" && await cache.match("index.html")) ||
+      Response.error();
+  }
+}
+
+async function cacheFirst(request) {
+  const hit = await caches.match(request, { ignoreSearch: true });
+  if (hit) return hit;
+  const res = await fetch(request);
+  if (res.ok || res.type === "opaque") {
+    const cache = await caches.open(VERSION);
+    cache.put(request, res.clone());
+  }
+  return res;
+}
+
+// The app's own code is fetched fresh whenever there is a connection, so updates show up on the
+// next launch; the cache is the offline fallback. Large libraries, icons and fonts never change
+// for a given version, so they are served from the cache.
 self.addEventListener("fetch", event => {
   const { request } = event;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
-  const isOwn = url.origin === self.location.origin;
-  const isFont = url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com";
-  if (!isOwn && !isFont) return;
-  event.respondWith(
-    caches.match(request, { ignoreSearch: isOwn }).then(hit => hit || fetch(request).then(res => {
-      if (res.ok || res.type === "opaque") {
-        const copy = res.clone();
-        caches.open(VERSION).then(cache => cache.put(request, copy));
-      }
-      return res;
-    }))
-  );
+  if (url.origin === self.location.origin) {
+    const isStatic = url.pathname.includes("/vendor/") || url.pathname.includes("/icons/");
+    event.respondWith(isStatic ? cacheFirst(request) : networkFirst(request));
+  } else if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") {
+    event.respondWith(cacheFirst(request));
+  }
 });
