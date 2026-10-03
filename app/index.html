@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pacemark Reader</title>
+<meta name="description" content="A highlighter that moves through PDFs, Word documents and text at the reading speed you choose.">
+<meta name="theme-color" content="#145A55">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-128.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>Pace<i>mark</i></b><span>a highlighter that reads at your speed</span></div>
+  <button class="btn primary" id="openBtn" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M12 18v-6m-3 3 3-3 3 3"/></svg>
+    Open file
+  </button>
+  <button class="btn" id="pasteBtn" type="button">Paste text</button>
+  <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md,.markdown,.html,.htm,application/pdf,text/plain" hidden>
+</header>
+<div class="docmeta" id="docmeta"></div>
+
+<section class="paste" id="pastePanel" hidden>
+  <textarea id="pasteText" placeholder="Paste an article, chapter or notes here…"></textarea>
+  <div class="row">
+    <button class="btn" type="button" id="pasteCancel">Cancel</button>
+    <button class="btn primary" type="button" id="pasteGo">Read this</button>
+  </div>
+</section>
+
+<main class="reader fade" id="reader" aria-live="off"></main>
+<div class="drop" id="drop" hidden>Drop a PDF, .docx or text file to read it</div>
+
+<footer class="bar">
+  <div class="bar-in">
+    <div class="progress" id="progress" title="Jump to a position"><i id="progressFill"></i></div>
+    <div class="controls">
+      <div class="transport">
+        <button class="ib" id="backBtn" type="button" aria-label="Back one sentence"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6v12l-8.5-6zM21 6v12l-8.5-6z"/></svg></button>
+        <button class="ib play" id="playBtn" type="button" aria-label="Play"><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+        <button class="ib" id="fwdBtn" type="button" aria-label="Forward one sentence"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 6v12l8.5-6zM3 6v12l8.5-6z"/></svg></button>
+      </div>
+      <div class="speed">
+        <output id="wpmOut" for="wpm">250</output><small>WPM</small>
+        <input type="range" id="wpm" min="60" max="1000" step="10" value="250" aria-label="Words per minute">
+      </div>
+      <div class="swatches" id="swatches" role="group" aria-label="Highlight color">
+        <label class="custom" id="customWrap" title="Custom color"><input type="color" id="customColor" value="#ffe45c" aria-label="Custom highlight color"></label>
+      </div>
+      <button class="ib settings-toggle" id="settingsBtn" type="button" aria-label="More settings" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
+      <div class="stats" id="stats">0 / 0 words · 0:00 left</div>
+    </div>
+    <div class="settings" id="settings" hidden>
+      <label>Style
+        <select id="style"><option value="marker">Marker</option><option value="underline">Underline</option><option value="box">Outline</option></select>
+      </label>
+      <label>Words at a time
+        <select id="chunk"><option>1</option><option>2</option><option>3</option></select>
+      </label>
+      <label>Text size <input type="range" id="fontSize" min="15" max="30" value="20"></label>
+      <label><input type="checkbox" id="punct" checked> Pause at punctuation</label>
+      <label><input type="checkbox" id="fadeRead" checked> Dim words already read</label>
+      <label><input type="checkbox" id="follow" checked> Auto-scroll</label>
+      <span class="keys"><kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> word · <kbd>Shift</kbd>+arrows sentence · <kbd>↑</kbd><kbd>↓</kbd> speed · click any word to jump</span>
+    </div>
+  </div>
+</footer>
+
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/mammoth.browser.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
