@@ -129,3 +129,5 @@ Nothing is collected or uploaded. See [PRIVACY.md](PRIVACY.md).
 
 [MIT](LICENSE) © 2026 Aditya Mittal. Bundles [pdf.js](https://github.com/mozilla/pdf.js) (Apache-2.0) and
 [mammoth.js](https://github.com/mwilliamson/mammoth.js) (BSD-2-Clause).
+
+Issues and suggestions are welcome — open one on GitHub.
