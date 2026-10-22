@@ -28,6 +28,9 @@ To try the extension, run `npm run build`, open `chrome://extensions`, turn on
 **Developer mode**, choose **Load unpacked** and pick `dist/pacemark-extension`.
 After changing extension code, rebuild and press the reload icon on the extension card.
 
+If the web app keeps showing old files, the service worker is serving its cache: open
+DevTools → Application → Service workers, tick **Update on reload**, then refresh.
+
 ## Pull requests
 
 - Keep changes focused; one feature or fix per PR.
